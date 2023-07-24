@@ -11,7 +11,8 @@ local bedInteractKey = 38  -- The key code for the 'E' key (default is 38)
 local getHealedKey = 23 -- The key code for the 'F' key
 local standingOffset = vector3(1.3, 0.0, 0.0)  -- Offset to move the player when standing up
 
-local isLyingDown = false
+isLyingDown = false
+gettingHealed = false
 
 -- Function to load animation dictionary
 local function LoadAnimDict(d)
@@ -67,6 +68,7 @@ local function StandUpAnimation()
     Wait(1500)
     DoScreenFadeIn(2000)
     ClearPedTasks(playerPed)
+    isLyingDown = false
 end
 
 local function GetClosestPlayer()
@@ -128,10 +130,15 @@ RegisterNetEvent('beds:localHeal', function(isRevive)
     end)
 end)
 
+AddEventHandler("hospital:client:isEscorted", function()
+    if isLyingDown then
+        StandUpAnimation()
+    end
+end)
 -- Main thread
 Citizen.CreateThread(function()
     local targetCoords = vector3(316.48, -576.39, 43.28)
-    gettingHealed = false
+    
     while true do
         Citizen.Wait(0)
         
@@ -230,11 +237,9 @@ Citizen.CreateThread(function()
                     isLyingDown = true
                 elseif isLyingDown and not gettingHealed then
                     StandUpAnimation()
-                    isLyingDown = false
                 end
             elseif IsControlJustPressed(0, 73) then
                 StandUpAnimation()
-                isLyingDown = false
             end
         end
     end
