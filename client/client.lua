@@ -69,6 +69,28 @@ local function StandUpAnimation()
     ClearPedTasks(playerPed)
 end
 
+local function GetClosestPlayer()
+    local players = QBCore.Functions.GetPlayersFromCoords()
+    local closestDistance = -1
+    local closestPlayer = -1
+    local coords = GetEntityCoords(PlayerPedId())
+
+    for i = 1, #players do
+        local playerId = players[i]
+        if playerId ~= PlayerId() then
+            local playerPed = GetPlayerPed(playerId)
+            local playerCoords = GetEntityCoords(playerPed)
+            local distance = #(playerCoords - coords)
+
+            if closestDistance == -1 or closestDistance > distance then
+                closestPlayer = playerId
+                closestDistance = distance
+            end
+        end
+    end
+    return closestPlayer, closestDistance
+end
+
 
 local function menu()
     exports['qb-menu']:openMenu({
@@ -88,7 +110,7 @@ local function menu()
             }
         },
     })
-end.
+end
 
 -- Modified from qb-ambulancejob
 RegisterNetEvent('beds:localHeal', function(isRevive)
@@ -140,20 +162,40 @@ Citizen.CreateThread(function()
                 AddTextComponentString("Press ~INPUT_PICKUP~ to lie down")
                 DisplayHelpTextFromStringLabel(0, 0, 1, -1)
             end
+
+            if isLyingDown and not gettingHealed then
+                SetTextComponentFormat("STRING")
+                AddTextComponentString("Press ~INPUT_VEH_DUCK~ to stand up")
+                DisplayHelpTextFromStringLabel(0, 0, 1, -1)
+            end
             
             -- Check if the player pressed the interact key
             if IsControlJustPressed(0, bedInteractKey) then
+                -- Prevent two people from laying in the same bed
+                local closestPlayer, closestPlayerDist = GetClosestPlayer()
+                if closestPlayer ~= nil and closestPlayerDist <= 1.5 then
+                    if IsEntityPlayingAnim(GetPlayerPed(closestPlayer), 'anim@gangops@morgue@table@', 'ko_front', 3) then
+                        QBCore.Functions.Notify('Somebody is already using this bed!', 'error')
+                        return
+                    end
+                end
+
                 if not isLyingDown then
                     if bedData.modelName == 'v_med_bed1' then
+                        local AIHealWait = Config.AIHealWait * 1000
                         QBCore.Functions.TriggerCallback('beds:doctorCount', function(doctorCount)
-                            local AIHealWait = Config.AIHealWait * 1000
                             if doctorCount < Config.MinimalDoctors then
                                 QBCore.Functions.Notify('Please wait while we ping a local doctor...', 'success', AIHealWait)
                                 Citizen.Wait(AIHealWait)
-                                QBCore.Functions.Notify('The doctor will see you now.', 'success')
-                                gettingHealed = true
-                                TriggerEvent('beds:localHeal', true)
-                                gettingHealed = false
+                                
+                                -- Prevent people from triggering it and walking away
+                                if isLyingDown then
+                                    gettingHealed = true
+                                    QBCore.Functions.Notify('The doctor will see you now.', 'success')
+                                    TriggerEvent('beds:localHeal', true)
+                                    gettingHealed = false
+                                end
+
                             
                             else -- If there are medics online
                                 -- Add logic here to trigger a dispatch call for a player checking in
@@ -186,7 +228,7 @@ Citizen.CreateThread(function()
                     end
                     LyingDownAnimation(bedObject, bedData)
                     isLyingDown = true
-                elseif isLyingDown and gettingHealed then
+                elseif isLyingDown and not gettingHealed then
                     StandUpAnimation()
                     isLyingDown = false
                 end
