@@ -1,4 +1,5 @@
 local QBCore = exports['qb-core']:GetCoreObject()
+
 -- Config
 local bedModelNames = {
     { modelName = "gabz_pillbox_diagnostics_bed_03", offset = vector3(0.0, 0.0, 1.0) },
@@ -133,11 +134,12 @@ AddEventHandler("hospital:client:isEscorted", function()
         StandUpAnimation()
     end
 end)
+
 -- Main thread
 Citizen.CreateThread(function()
     local targetCoords = vector3(316.48, -576.39, 43.28)
     
-    while true do        
+    while true do
         local playerPed = PlayerPedId()
         local playerCoords = GetEntityCoords(playerPed)
 
@@ -223,7 +225,6 @@ Citizen.CreateThread(function()
                                 QBCore.Functions.Notify('Please wait while we ping a doctor...', 'success', AIHealWait)
                                 Citizen.Wait(AIHealWait)
                                 menu()
-
                             end
                         end)
                     end
