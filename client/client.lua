@@ -124,8 +124,6 @@ RegisterNetEvent('beds:localHeal', function(isRevive)
             Wait(Config.AIHealTimer * 1000)
             TriggerEvent("hospital:client:Revive")
             gettingHealed = false
-        else
-            canLeaveBed = true
         end
     end)
 end)
@@ -139,9 +137,7 @@ end)
 Citizen.CreateThread(function()
     local targetCoords = vector3(316.48, -576.39, 43.28)
     
-    while true do
-        Citizen.Wait(0)
-        
+    while true do        
         local playerPed = PlayerPedId()
         local playerCoords = GetEntityCoords(playerPed)
 
@@ -177,7 +173,7 @@ Citizen.CreateThread(function()
             end
             
             -- Check if the player pressed the interact key
-            if IsControlJustPressed(0, bedInteractKey) then
+            if IsControlJustPressed(0, bedInteractKey) and not isLyingDown then
                 -- Prevent two people from laying in the same bed
                 local closestPlayer, closestPlayerDist = GetClosestPlayer()
                 if closestPlayer ~= nil and closestPlayerDist <= 1.5 then
@@ -197,10 +193,8 @@ Citizen.CreateThread(function()
                                 
                                 -- Prevent people from triggering it and walking away
                                 if isLyingDown then
-                                    gettingHealed = true
                                     QBCore.Functions.Notify('The doctor will see you now.', 'success')
                                     TriggerEvent('beds:localHeal', true)
-                                    gettingHealed = false
                                 end
 
                             
