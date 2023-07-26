@@ -158,7 +158,7 @@ Citizen.CreateThread(function()
                 end
             end
 
-        if isNearBed then            
+        if isNearBed then
             -- Display prompt to lie down
             if not isLyingDown then
                 SetTextComponentFormat("STRING")
