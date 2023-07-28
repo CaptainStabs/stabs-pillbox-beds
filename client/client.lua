@@ -224,7 +224,11 @@ Citizen.CreateThread(function()
 
                                 QBCore.Functions.Notify('Please wait while we ping a doctor...', 'success', AIHealWait)
                                 Citizen.Wait(AIHealWait)
-                                menu()
+
+                                -- Prevent people from leaving the bed and still getting healed
+                                if isLyingDown then
+                                    menu()
+                                end
                             end
                         end)
                     end
