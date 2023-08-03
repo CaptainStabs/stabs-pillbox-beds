@@ -103,7 +103,7 @@ local function menu()
             isMenuHeader = true, -- Set to true to make a nonclickable title
         },
         {
-            header = 'Let local doctor treat you',
+            header = 'Let local doctor treat you (DO NOT CLICK IF NHS IS TREATING YOU)',
             txt = 'Get healed',
             params = {
                 event = 'beds:localHeal',
