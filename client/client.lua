@@ -242,7 +242,7 @@ Citizen.CreateThread(function()
                                         }
                                     })
                                 end
-                                
+
                                 QBCore.Functions.Notify('Please wait while we ping a doctor...', 'success', AIHealWait)
                                 Citizen.Wait(AIHealWait)
 
@@ -258,7 +258,7 @@ Citizen.CreateThread(function()
                 elseif isLyingDown and not gettingHealed then
                     StandUpAnimation()
                 end
-            elseif IsControlJustPressed(0, 73) then
+            elseif IsControlJustPressed(0, 73) and isLyingDown then
                 StandUpAnimation()
             end
         end
