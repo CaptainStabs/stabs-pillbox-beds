@@ -202,26 +202,47 @@ Citizen.CreateThread(function()
                             
                             else -- If there are medics online
                                 -- Add logic here to trigger a dispatch call for a player checking in
-                                local data = exports['cd_dispatch']:GetPlayerInfo()
-                                TriggerServerEvent('cd_dispatch:AddNotification', {
-                                    job_table = {'ambulance', }, 
-                                    coords = data.coords,
-                                    title = 'An injured person has checked in...',
-                                    message = '', 
-                                    flash = 0,
-                                    unique_id = data.unique_id,
-                                    sound = 1,
-                                    blip = {
-                                        sprite = 682, 
-                                        scale = 1.2, 
-                                        colour = 3,
-                                        flashes = false, 
-                                        text = 'Checked-In',
-                                        time = 5,
-                                        radius = 0,
-                                    }
-                                })
-
+                                if Config.Dispatch == 'cd_dispatch' then
+                                    local data = exports['cd_dispatch']:GetPlayerInfo()
+                                    TriggerServerEvent('cd_dispatch:AddNotification', {
+                                        job_table = {'ambulance', }, 
+                                        coords = data.coords,
+                                        title = 'An injured person has checked in...',
+                                        message = '', 
+                                        flash = 0,
+                                        unique_id = data.unique_id,
+                                        sound = 1,
+                                        blip = {
+                                            sprite = 682, 
+                                            scale = 1.2, 
+                                            colour = 3,
+                                            flashes = false, 
+                                            text = 'Checked-In',
+                                            time = 5,
+                                            radius = 0,
+                                        }
+                                    })
+                                
+                                elseif Config.Dispatch == 'qs-dispatch' then
+                                    local playerData = exports['qs-dispatch']:GetPlayerInfo()
+                                    TriggerServerEvent('qs-dispatch:server:CreateDiapatchCall', {
+                                        job = {'ambulance'},
+                                        callLocation = playerData.coords,
+                                        callCode = { code = 'Injured Patient', snippet = 'Patient' },
+                                        message = "An injured person has checked in...",
+                                        flashes = false,
+                                        image = image or nil,
+                                        blip = {
+                                            sprite = 682,
+                                            scale = 1.2,
+                                            colour = 1,
+                                            flashes = false,
+                                            text = 'Patient',
+                                            time = (20 * 1000),     --20 secs
+                                        }
+                                    })
+                                end
+                                
                                 QBCore.Functions.Notify('Please wait while we ping a doctor...', 'success', AIHealWait)
                                 Citizen.Wait(AIHealWait)
 
