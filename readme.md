@@ -1,3 +1,5 @@
+Adds useable beds to pillbox, tested on `cfx-gabz-pillbox`
+
 Requirements:
 - [qb-core](https://github.com/qbcore-framework/qb-core)
 - [qb-ambulancejob](https://github.com/qbcore-framework/qb-ambulancejob)
