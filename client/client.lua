@@ -26,6 +26,11 @@ end
 -- Preload animation dictionaries
 LoadAnimDict("anim@gangops@morgue@table@")
 
+RegisterCommand('fixfade', function()
+    DoScreenFadeIn(1)
+    DetachEntity(GetPlayerPed(-1))
+end)
+
 -- Function to check if the player is near a bed
 local function IsPlayerNearBed()
     local playerPed = PlayerPedId()
@@ -51,7 +56,7 @@ end
 local function LyingDownAnimation(bedObject, bedData)
     local playerPed = PlayerPedId()
     local bedOffset = GetOffsetFromEntityInWorldCoords(bedObject, bedData.offset.x, bedData.offset.y, bedData.offset.z)
-    local bedHeading = GetEntityHeading(bedObject)
+    bedHeading = GetEntityHeading(bedObject) --needs to be global
 
     SetEntityCoordsNoOffset(playerPed, bedOffset, 0, 0, 1)
     SetEntityHeading(playerPed, bedHeading + 180.0) -- Rotate player's heading by 180 degrees
@@ -59,18 +64,61 @@ local function LyingDownAnimation(bedObject, bedData)
     TaskPlayAnim(playerPed, "anim@gangops@morgue@table@", "ko_front", 3.0, 3.0, -1, 1, 0, false, false, false)
 end
 
--- Function to perform the standing up animation
-local function StandUpAnimation()
+local function StandUpAnimation(skipAnim)
+    DoScreenFadeOut(500)
     local playerPed = PlayerPedId()
-    DoScreenFadeOut(2000)
-    Wait(1500)
-    local playerOffset = GetOffsetFromEntityInWorldCoords(playerPed, standingOffset.x, standingOffset.y, standingOffset.z)
-    SetEntityCoordsNoOffset(playerPed, playerOffset, 0, 0, 1)
-    Wait(1500)
-    DoScreenFadeIn(2000)
+    LoadAnimDict('switch@franklin@bed')
+    if not skipAnim then
+        -- Check if the player is in the specific bed model
+        local isPlayerInSpecificBed = false
+        for i, bedData in ipairs(bedModelNames) do
+            if bedData.modelName == 'v_med_bed1' then
+                local bedObject = GetClosestObjectOfType(GetEntityCoords(playerPed), 3.0, GetHashKey(bedData.modelName), false, false, false)
+                if bedObject == nil or bedObject == 0 then
+                    isPlayerInSpecificBed = false
+                    break
+                end
+                isPlayerInSpecificBed = true
+                break
+            end
+        end
+
+        -- Play animation if the player is in the specific bed
+        if isPlayerInSpecificBed then
+            Wait(1000)
+            local adjustedPosition = vector3(0, 0, 0)
+            local playerOffset = GetOffsetFromEntityInWorldCoords(playerPed, adjustedPosition.x, adjustedPosition.y, adjustedPosition.z)
+            
+            SetEntityCoordsNoOffset(playerPed, playerOffset.x, playerOffset.y, playerOffset.z, true, true, true)
+            SetEntityHeading(playerPed, bedHeading - 90)
+            Wait(1000)
+            ClearPedTasks(playerPedId)
+            TaskPlayAnim(playerPed, 'switch@franklin@bed', 'sleep_getup_rubeyes', 8.0, -8.0, -1, 0, 0, false, false, false)
+            
+            -- Actions while animation is playing
+            Wait(1000)
+            DoScreenFadeIn(500)
+            Wait(5000)
+
+        else
+            print('eslse')
+            local playerOffset = GetOffsetFromEntityInWorldCoords(playerPed, standingOffset.x, standingOffset.y, standingOffset.z)
+            SetEntityCoordsNoOffset(playerPed, playerOffset, 0, 0, 1)
+            DoScreenFadeIn(500)
+        end
+    else
+        -- If skipping animation, just do a DoScreenFadeIn
+        DoScreenFadeIn(500)
+    end
+
     ClearPedTasks(playerPed)
+    Wait(500)
+    DoScreenFadeIn(500)
     isLyingDown = false
+
 end
+
+
 
 local function GetClosestPlayer()
     local players = QBCore.Functions.GetPlayersFromCoords()
@@ -131,7 +179,7 @@ end)
 
 AddEventHandler("hospital:client:isEscorted", function()
     if isLyingDown then
-        StandUpAnimation()
+        StandUpAnimation(true)
     end
 end)
 
@@ -256,10 +304,10 @@ Citizen.CreateThread(function()
                     LyingDownAnimation(bedObject, bedData)
                     isLyingDown = true
                 elseif isLyingDown and not gettingHealed then
-                    StandUpAnimation()
+                    StandUpAnimation(false)
                 end
-            elseif IsControlJustPressed(0, 73) and isLyingDown then
-                StandUpAnimation()
+            elseif IsControlJustPressed(0, bedInteractKey) and isLyingDown then
+                StandUpAnimation(false)
             end
         end
     end
