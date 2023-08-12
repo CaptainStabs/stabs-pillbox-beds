@@ -218,7 +218,7 @@ Citizen.CreateThread(function()
 
             if isLyingDown and not gettingHealed then
                 SetTextComponentFormat("STRING")
-                AddTextComponentString("Press ~INPUT_VEH_DUCK~ to stand up")
+                AddTextComponentString("Press ~INPUT_PICKUP~ to stand up")
                 DisplayHelpTextFromStringLabel(0, 0, 1, -1)
             end
             
