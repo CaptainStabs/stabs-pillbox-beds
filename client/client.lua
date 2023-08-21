@@ -170,8 +170,17 @@ RegisterNetEvent('beds:localHeal', function(isRevive)
         Wait(5)
         if isRevive then
             QBCore.Functions.Notify('You are being helped...', 'success')
-            Wait(Config.AIHealTimer * 1000)
-            TriggerEvent("hospital:client:Revive")
+            QBCore.Functions.Progressbar("ai_heal", "You are being helped", Config.AIHealTimer * 1000, false, false, {
+                disableMovement = false,
+                disableCarMovement = false,
+                disableMouse = false,
+                disableCombat = true,
+            }, {}, {}, {}, function()
+                Citizen.Wait(500)
+                TriggerEvent("hospital:client:Revive")
+                StopScreenEffect('DeathFailOut')
+                spam = true
+            end)
             gettingHealed = false
         end
     end)
