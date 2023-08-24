@@ -218,6 +218,9 @@ Citizen.CreateThread(function()
             end
 
         if isNearBed then
+            if isLyingDown and not IsEntityPlayingAnim(playerPed, "anim@gangops@morgue@table@", "ko_front", 3.0) then
+                TaskPlayAnim(playerPed, "anim@gangops@morgue@table@", "ko_front", 3.0, 3.0, -1, 1, 0, false, false, false)
+            end
             -- Display prompt to lie down
             if not isLyingDown then
                 SetTextComponentFormat("STRING")
