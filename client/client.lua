@@ -8,7 +8,8 @@ local bedModelNames = {
     { modelName = "v_med_bed1", offset = vector3(0.0, 0.0, 1.0) }
 }
 
-local bedInteractKey = 38  -- The key code for the 'E' key (default is 38)
+local bedInteractKey = 52  -- The key code for the 'E' key (default is 38)
+local keyName = 'INPUT_CONTEXT_SECONDARY'
 local getHealedKey = 23 -- The key code for the 'F' key
 local standingOffset = vector3(1.3, 0.0, 0.0)  -- Offset to move the player when standing up
 
@@ -189,6 +190,7 @@ end)
 AddEventHandler("hospital:client:isEscorted", function()
     if isLyingDown then
         StandUpAnimation(true)
+        
     end
 end)
 
@@ -224,13 +226,13 @@ Citizen.CreateThread(function()
             -- Display prompt to lie down
             if not isLyingDown then
                 SetTextComponentFormat("STRING")
-                AddTextComponentString("Press ~INPUT_PICKUP~ to lie down")
+                AddTextComponentString("Press ~"..keyName.."~ to lie down")
                 DisplayHelpTextFromStringLabel(0, 0, 1, -1)
             end
 
             if isLyingDown and not gettingHealed then
                 SetTextComponentFormat("STRING")
-                AddTextComponentString("Press ~INPUT_PICKUP~ to stand up")
+                AddTextComponentString("Press ~"..keyName.."~ to stand up")
                 DisplayHelpTextFromStringLabel(0, 0, 1, -1)
             end
             
@@ -244,83 +246,227 @@ Citizen.CreateThread(function()
                         return
                     end
                 end
+                local playerId = PlayerPedId()
+                local playerServerId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(playerId))
+                QBCore.Functions.TriggerCallback('beds:server:GetPlayerStatus', function(inLaststand, isDead)
+                    if not isLyingDown and not isDead then
+                        if bedData.modelName == 'v_med_bed1' then
+                            local AIHealWait = Config.AIHealWait * 1000
+                            QBCore.Functions.TriggerCallback('beds:doctorCount', function(doctorCount)
+                                print("beds doctor count".. doctorCount)
+                                if doctorCount <= Config.MinimalDoctors then
+                                    QBCore.Functions.Notify('Please wait while we ping a local doctor...', 'success', AIHealWait)
+                                    Citizen.Wait(AIHealWait)
+                                    
+                                    -- Prevent people from triggering it and walking away
+                                    if isLyingDown then
+                                        QBCore.Functions.Notify('The doctor will see you now.', 'success')
+                                        TriggerEvent('beds:localHeal', true)
+                                    end
 
-                if not isLyingDown then
-                    if bedData.modelName == 'v_med_bed1' then
-                        local AIHealWait = Config.AIHealWait * 1000
-                        QBCore.Functions.TriggerCallback('beds:doctorCount', function(doctorCount)
-                            if doctorCount < Config.MinimalDoctors then
-                                QBCore.Functions.Notify('Please wait while we ping a local doctor...', 'success', AIHealWait)
-                                Citizen.Wait(AIHealWait)
                                 
-                                -- Prevent people from triggering it and walking away
-                                if isLyingDown then
-                                    QBCore.Functions.Notify('The doctor will see you now.', 'success')
-                                    TriggerEvent('beds:localHeal', true)
-                                end
-
-                            
-                            else -- If there are medics online
-                                -- Add logic here to trigger a dispatch call for a player checking in
-                                if Config.Dispatch == 'cd_dispatch' then
-                                    local data = exports['cd_dispatch']:GetPlayerInfo()
-                                    TriggerServerEvent('cd_dispatch:AddNotification', {
-                                        job_table = {'ambulance', }, 
-                                        coords = data.coords,
-                                        title = 'An injured person has checked in...',
-                                        message = '', 
-                                        flash = 0,
-                                        unique_id = data.unique_id,
-                                        sound = 1,
-                                        blip = {
-                                            sprite = 682, 
-                                            scale = 1.2, 
-                                            colour = 3,
-                                            flashes = false, 
-                                            text = 'Checked-In',
-                                            time = 5,
-                                            radius = 0,
-                                        }
-                                    })
-                                
-                                elseif Config.Dispatch == 'qs-dispatch' then
-                                    local playerData = exports['qs-dispatch']:GetPlayerInfo()
-                                    TriggerServerEvent('qs-dispatch:server:CreateDiapatchCall', {
-                                        job = {'ambulance'},
-                                        callLocation = playerData.coords,
-                                        callCode = { code = 'Injured Patient', snippet = 'Patient' },
-                                        message = "An injured person has checked in...",
-                                        flashes = false,
-                                        image = image or nil,
-                                        blip = {
-                                            sprite = 682,
-                                            scale = 1.2,
-                                            colour = 1,
+                                else -- If there are medics online
+                                    -- Add logic here to trigger a dispatch call for a player checking in
+                                    if Config.Dispatch == 'cd_dispatch' then
+                                        local data = exports['cd_dispatch']:GetPlayerInfo()
+                                        TriggerServerEvent('cd_dispatch:AddNotification', {
+                                            job_table = {'ambulance', }, 
+                                            coords = data.coords,
+                                            title = 'An injured person has checked in...',
+                                            message = '', 
+                                            flash = 0,
+                                            unique_id = data.unique_id,
+                                            sound = 1,
+                                            blip = {
+                                                sprite = 682, 
+                                                scale = 1.2, 
+                                                colour = 3,
+                                                flashes = false, 
+                                                text = 'Checked-In',
+                                                time = 5,
+                                                radius = 0,
+                                            }
+                                        })
+                                    
+                                    elseif Config.Dispatch == 'qs-dispatch' then
+                                        local playerData = exports['qs-dispatch']:GetPlayerInfo()
+                                        TriggerServerEvent('qs-dispatch:server:CreateDiapatchCall', {
+                                            job = {'ambulance'},
+                                            callLocation = playerData.coords,
+                                            callCode = { code = 'Injured Patient', snippet = 'Patient' },
+                                            message = "An injured person has checked in...",
                                             flashes = false,
-                                            text = 'Patient',
-                                            time = (20 * 1000),     --20 secs
-                                        }
-                                    })
-                                end
+                                            image = image or nil,
+                                            blip = {
+                                                sprite = 682,
+                                                scale = 1.2,
+                                                colour = 1,
+                                                flashes = false,
+                                                text = 'Patient',
+                                                time = (20 * 1000),     --20 secs
+                                            }
+                                        })
+                                    end
 
-                                QBCore.Functions.Notify('Please wait while we ping a doctor...', 'success', AIHealWait)
-                                Citizen.Wait(AIHealWait)
+                                    QBCore.Functions.Notify('Please wait while we ping a doctor...', 'success', AIHealWait)
+                                    Citizen.Wait(AIHealWait)
 
-                                -- Prevent people from leaving the bed and still getting healed
-                                if isLyingDown then
-                                    menu()
+                                    -- Prevent people from leaving the bed and still getting healed
+                                    if isLyingDown then
+                                        menu()
+                                    end
                                 end
-                            end
-                        end)
+                            end, playerServerId)
+                        end
+                        LyingDownAnimation(bedObject, bedData)
+                        isLyingDown = true
+                    elseif isLyingDown and not gettingHealed then
+                        StandUpAnimation(false)
+                        
+                        isLyingDown = false
                     end
-                    LyingDownAnimation(bedObject, bedData)
-                    isLyingDown = true
-                elseif isLyingDown and not gettingHealed then
-                    StandUpAnimation(false)
-                end
+                end, playerServerId)
             elseif IsControlJustPressed(0, bedInteractKey) and isLyingDown then
                 StandUpAnimation(false)
+                
+                isLyingDown = false
             end
         end
     end
 end)
+
+-- Citizen.CreateThread(function()
+--     local targetCoords = vector3(1823.19, 3674.72, 34.27)
+    
+--     while true do
+--         local playerPed = PlayerPedId()
+--         local playerCoords = GetEntityCoords(playerPed)
+
+--         -- Check if the player is near a bed
+--         local isNearBed, bedObject, bedData = IsPlayerNearBed()
+        
+--         local distanceToTarget = GetDistanceBetweenCoords(playerCoords, targetCoords, true)
+--             if distanceToTarget <= 50.0 then
+--                 -- Set wait time to 0 when player is within 100 units of the target coordinates
+--                 Citizen.Wait(0)
+--             else
+--                 -- Calculate a scaled wait time based on the player's distance from the target coordinates
+--                 local scaledWaitTime = math.floor(distanceToTarget * 2)  -- Adjust the division factor (10.0) as needed
+--                 if scaledWaitTime > 0 then
+--                     Citizen.Wait(scaledWaitTime)
+--                 else
+--                     Citizen.Wait(0)
+--                 end
+--             end
+
+--         if isNearBed then
+--             if isLyingDown and not IsEntityPlayingAnim(playerPed, "anim@gangops@morgue@table@", "ko_front", 3.0) then
+--                 TaskPlayAnim(playerPed, "anim@gangops@morgue@table@", "ko_front", 3.0, 3.0, -1, 1, 0, false, false, false)
+--             end
+--             -- Display prompt to lie down
+--             if not isLyingDown then
+--                 SetTextComponentFormat("STRING")
+--                 AddTextComponentString("Press ~INPUT_ENTER~ to lie down")
+--                 DisplayHelpTextFromStringLabel(0, 0, 1, -1)
+--             end
+
+--             if isLyingDown and not gettingHealed then
+--                 SetTextComponentFormat("STRING")
+--                 AddTextComponentString("Press ~INPUT_ENTER~ to stand up")
+--                 DisplayHelpTextFromStringLabel(0, 0, 1, -1)
+--             end
+            
+--             -- Check if the player pressed the interact key
+--             if IsControlJustPressed(0, bedInteractKey) and not isLyingDown then
+--                 -- Prevent two people from laying in the same bed
+--                 local closestPlayer, closestPlayerDist = GetClosestPlayer()
+--                 if closestPlayer ~= nil and closestPlayerDist <= 1.5 then
+--                     if IsEntityPlayingAnim(GetPlayerPed(closestPlayer),AIHealWait 'anim@gangops@morgue@table@', 'ko_front', 3) then
+--                         QBCore.Functions.Notify('Somebody is already using this bed!', 'error')
+--                         return
+--                     end
+--                 end
+
+--                 if not isLyingDown then
+--                     if bedData.modelName == 'v_med_bed1' then
+--                         local AIHealWait = Config.AIHealWait * 1000
+--                         QBCore.Functions.TriggerCallback('beds:doctorCount', function(doctorCount)
+--                             if doctorCount < Config.MinimalDoctors then
+--                                 QBCore.Functions.Notify('Please wait while we ping a local doctor...', 'success', AIHealWait)
+--                                 Citizen.Wait(AIHealWait)
+                                
+--                                 -- Prevent people from triggering it and walking away
+--                                 if isLyingDown then
+--                                     QBCore.Functions.Notify('The doctor will see you now.', 'success')
+--                                     TriggerEvent('beds:localHeal', true)
+--                                 end
+
+                            
+--                             else -- If there are medics online
+--                                 -- Add logic here to trigger a dispatch call for a player checking in
+--                                 if Config.Dispatch == 'cd_dispatch' then
+--                                     local data = exports['cd_dispatch']:GetPlayerInfo()
+--                                     TriggerServerEvent('cd_dispatch:AddNotification', {
+--                                         job_table = {'ambulance', }, 
+--                                         coords = data.coords,
+--                                         title = 'An injured person has checked in...',
+--                                         message = '', 
+--                                         flash = 0,
+--                                         unique_id = data.unique_id,
+--                                         sound = 1,
+--                                         blip = {
+--                                             sprite = 682, 
+--                                             scale = 1.2, 
+--                                             colour = 3,
+--                                             flashes = false, 
+--                                             text = 'Checked-In',
+--                                             time = 5,
+--                                             radius = 0,
+--                                         }
+--                                     })
+                                
+--                                 elseif Config.Dispatch == 'qs-dispatch' then
+--                                     local playerData = exports['qs-dispatch']:GetPlayerInfo()
+--                                     TriggerServerEvent('qs-dispatch:server:CreateDiapatchCall', {
+--                                         job = {'ambulance'},
+--                                         callLocation = playerData.coords,
+--                                         callCode = { code = 'Injured Patient', snippet = 'Patient' },
+--                                         message = "An injured person has checked in...",
+--                                         flashes = false,
+--                                         image = image or nil,
+--                                         blip = {
+--                                             sprite = 682,
+--                                             scale = 1.2,
+--                                             colour = 1,
+--                                             flashes = false,
+--                                             text = 'Patient',
+--                                             time = (20 * 1000),     --20 secs
+--                                         }
+--                                     })
+--                                 end
+
+--                                 QBCore.Functions.Notify('Please wait while we ping a doctor...', 'success', AIHealWait)
+--                                 Citizen.Wait(AIHealWait)
+
+--                                 -- Prevent people from leaving the bed and still getting healed
+--                                 if isLyingDown then
+--                                     menu()
+--                                 end
+--                             end
+--                         end)
+--                     end
+--                     LyingDownAnimation(bedObject, bedData)
+--                     isLyingDown = true
+--                 elseif isLyingDown and not gettingHealed then
+--                     StandUpAnimation(false)
+                    
+--                     isLyingDown = false
+--                 end
+--             elseif IsControlJustPressed(0, bedInteractKey) and isLyingDown then
+--                 StandUpAnimation(false)
+                
+--                 isLyingDown = false
+--             end
+--         end
+--     end
+-- end)
